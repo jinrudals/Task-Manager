@@ -62,7 +62,6 @@ class RedisClient:
         return item_details
 
     async def complete(self, item):
-        logger.info("This is called?")
         project = item["project"]
         command = item["command"]
         build = item["build"]
