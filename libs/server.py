@@ -1,29 +1,28 @@
-from libs import Redis
 import asyncio
-import websockets
 import json
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
-logging.basicConfig(level=logging.DEBUG)
+import websockets
+from libs import Redis
+
+# Configure logging
 clients = defaultdict(set)
 
 
 class Server:
-    MAXIMUM = 5
-
     def __init__(self, host, port, redis_host, redis_port, maximum):
         self.host = host
         self.port = port
-        self.redis = Redis.RedisClient(
-            redis_host,
-            redis_port
-        )
+        self.redis = Redis.RedisClient(redis_host, redis_port)
         self.MAXIMUM = maximum
+        logging.debug("Server initialized with host %s, port %s, redis_host %s, redis_port %s, maximum %d",
+                      host, port, redis_host, redis_port, maximum)
 
     async def serve(self):
         await self.redis.connect()
-        server = await websockets.serve(lambda ws, path: self.handle_client(ws, path), self.host, self.port)
+        server = await websockets.serve(self.handle_client, self.host, self.port)
+        logging.info("WebSocket server started on %s:%s", self.host, self.port)
 
         task = asyncio.create_task(server.wait_closed())
         task2 = asyncio.create_task(self.launch())
@@ -32,48 +31,51 @@ class Server:
 
     async def handle_client(self, ws, path):
         clients[path].add(ws)
+        logging.info("Client connected: %s", path)
         try:
             async for message in ws:
-                print(message)
                 try:
-                    message: dict = json.loads(message)
+                    message = json.loads(message)
+                    logging.debug("Received message: %s", message)
                     action = message.get('action')
+
                     if action == "add":
-                        print(f"Action is add")
                         message.pop("action")
                         message["channel"] = path
                         await self.redis.enqueue(message)
+                        logging.info("Message enqueued: %s", message)
 
-                    if action == "complete":
-                        complete = message.get("complete")
-                        await self.redis.complete(complete)
+                    elif action == "complete":
+                        message["channel"] = path
+                        await self.redis.complete(message)
                         self.MAXIMUM += 1
-                    if action == "flush":
+                        logging.info("Message completed: %s", message)
+
+                    elif action == "flush":
                         await self.redis.flush()
+                        logging.info("Redis flushed")
                 except Exception as e:
-                    print(e)
-                    pass
-            pass
+                    logging.error("Error processing message: %s",
+                                  e, exc_info=True)
         except websockets.ConnectionClosed:
             clients[path].remove(ws)
-            pass
+            logging.info("Client disconnected: %s", path)
 
     async def launch(self):
-        print("This should be executed")
         while True:
-            print(f"Current Maximum is {self.MAXIMUM}")
             if self.MAXIMUM > 0:
                 item = await self.redis.launch()
                 if item:
                     channel = item.get('channel')
+                    logging.debug("Launching item: %s", item)
                     for client in clients[channel]:
                         await client.send(json.dumps(item))
                     self.MAXIMUM -= 1
+                    logging.info("Item launched and sent to clients: %s", item)
             await asyncio.sleep(1)
-        print("This should never be called")
 
 
 if __name__ == "__main__":
-    a = Server("localhost", 8023, "localhost", 6379, 5)
-    asyncio.run(a.serve())
-    pass
+    logging.basicConfig(level=logging.info)
+    server = Server("localhost", 8023, "localhost", 6379, 5)
+    asyncio.run(server.serve())

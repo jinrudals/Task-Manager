@@ -1,5 +1,6 @@
-import aioredis
+import asyncio
 import logging
+import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)
 PENDING = 'pending_queue'
@@ -12,7 +13,8 @@ class RedisClient:
         self.redis = None
 
     async def connect(self):
-        self.redis = await aioredis.from_url(f"redis://{self.host}:{self.port}", decode_responses=True)
+        self.redis = redis.Redis(
+            host=self.host, port=self.port, decode_responses=True)
 
     async def calculate_priority(self, owner, project):
         owner_count = await self.redis.scard(f"running:owner:{owner}")
@@ -25,7 +27,6 @@ class RedisClient:
         command = item["command"]
         build = item["build"]
         channel = item["channel"]
-        # item_id = await self.redis.incr('item_id')
         item_id = f"{channel}/{project}/{build}/{command}"
         item_key = f"item:{item_id}"
 
@@ -34,13 +35,11 @@ class RedisClient:
         item["priority"] = priority
         for field, value in item.items():
             await self.redis.hset(item_key, field, value)
-        # await self.redis.hset(item_key, mapping=item)
         await self.redis.zadd(PENDING, {item_key: priority})
         logger.info(f"Item({item_id}) is added")
 
     async def launch(self):
         item_keys = await self.redis.zrange(PENDING, 0, 0)
-        print(f"???? : {item_keys}")
         if not item_keys:
             # logger.warning("No items available in the pending queue")
             return None
@@ -63,7 +62,14 @@ class RedisClient:
         return item_details
 
     async def complete(self, item):
-        item_details = await self.redis.hgetall(item)
+        logger.info("This is called?")
+        project = item["project"]
+        command = item["command"]
+        build = item["build"]
+        channel = item["channel"]
+
+        item_id = f"{channel}/{project}/{build}/{command}"
+        item_details = await self.redis.hgetall(item_id)
 
         if not item_details:
             logger.error("Item not found in running queue")
