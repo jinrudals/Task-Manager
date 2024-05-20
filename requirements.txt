@@ -1,0 +1,8 @@
+aioconsole==0.7.1
+aioredis==2.0.1
+async-timeout==4.0.3
+configparser==7.0.0
+redis==5.0.4
+setuptools==69.5.1
+typing_extensions==4.11.0
+websockets==12.0
