@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import redis.asyncio as redis
 
@@ -41,7 +40,7 @@ class RedisClient:
     async def launch(self):
         item_keys = await self.redis.zrange(PENDING, 0, 0)
         if not item_keys:
-            # logger.warning("No items available in the pending queue")
+            logger.warning("No items available in the pending queue")
             return None
 
         logger.info(f"Item should be launched here {item_keys}")
@@ -62,12 +61,15 @@ class RedisClient:
         return item_details
 
     async def complete(self, item):
+        logger.debug(f"Complete item from redis. Item is {item}")
         project = item["project"]
         command = item["command"]
         build = item["build"]
         channel = item["channel"]
 
-        item_id = f"{channel}/{project}/{build}/{command}"
+        item_id = f"item:{channel}/{project}/{build}/{command}"
+
+        logger.debug(f"Complete target id:{item_id}")
         item_details = await self.redis.hgetall(item_id)
 
         if not item_details:
@@ -77,10 +79,12 @@ class RedisClient:
         owner = item_details["owner"]
         project = item_details["project"]
 
-        await self.redis.srem(f"running:owner:{owner}", item)
-        await self.redis.srem(f"running:project:{project}", item)
-        await self.redis.srem('running_queue', item)
-        await self.redis.delete(item)
+        logger.debug(f"Complete target owner : {owner}")
+        logger.debug(f"Complete target project : {project}")
+        await self.redis.srem(f"running:owner:{owner}", item_id)
+        await self.redis.srem(f"running:project:{project}", item_id)
+        await self.redis.srem('running_queue', item_id)
+        await self.redis.delete(item_id)
 
         logger.info(f"Complete item {item}")
 

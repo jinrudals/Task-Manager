@@ -5,11 +5,11 @@ import argparse
 import asyncio
 import configparser
 import os
+import logging
 from pathlib import Path
 from libs import server
 
 # Configure logging
-import logging
 logging.basicConfig(level=logging.DEBUG)
 
 config = configparser.ConfigParser()
@@ -28,6 +28,8 @@ def get_config_value(section, option, default=None):
 
 
 def parser():
+    '''Argument Parser
+    '''
     parse = argparse.ArgumentParser(description='Task Manage Server')
     parse.add_argument("--host", help="Server Host Value")
     parse.add_argument("--port", help="Server Port Value")
@@ -73,8 +75,8 @@ def arg_checker(args):
         raise Exception("No Redis port")
     try:
         redis_port = int(redis_port)
-    except ValueError:
-        raise Exception("Redis port value must be an integer")
+    except ValueError as exec:
+        raise Exception("Redis port value must be an integer") from exec
     logging.debug("Redis port value: %d", redis_port)
 
     # Maximum
@@ -82,8 +84,8 @@ def arg_checker(args):
         raise Exception('No maximum value is set')
     try:
         maximum = int(maximum)
-    except ValueError:
-        raise Exception("Maximum value should be an integer")
+    except ValueError as exec:
+        raise Exception("Maximum value should be an integer") from exec
     logging.debug("Maximum value: %d", maximum)
 
     args.host = host

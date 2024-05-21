@@ -64,7 +64,7 @@ async def send_message(websocket):
 
 
 async def main(channel):
-    uri = f"ws://localhost:8023/{channel}"
+    uri = f"ws://127.0.1.1:8023/{channel}"
     print(f"Trying to connect to channel: {uri}")
     task_list = []
 
