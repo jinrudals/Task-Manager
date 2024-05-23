@@ -10,20 +10,37 @@ from pathlib import Path
 from libs import server
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger()
 
+fh = logging.FileHandler("app.log")
+fh.setLevel(logging.DEBUG)
+
+sh = logging.StreamHandler()
+sh.setLevel(logging.INFO)
+
+formatter = logging.Formatter(
+    "[%(asctime)s][%(levelname)s][%(name)s] : %(message)s"
+)
+
+
+fh.setFormatter(formatter)
+sh.setFormatter(formatter)
+
+if not logger.handlers:
+    logger.addHandler(fh)
+    logger.addHandler(sh)
 config = configparser.ConfigParser()
 config_file = Path(__file__).parent / ".config"
 if os.path.isfile(config_file):
     config.read(config_file)
-    logging.debug("Config file loaded: %s", config_file)
+    logger.debug("Config file loaded: %s", config_file)
 
 
 def get_config_value(section, option, default=None):
     """Helper function to get a value from the config file with a default."""
     value = config.get(section, option) if config.has_option(
         section, option) else default
-    logging.debug("Config value for [%s] %s: %s", section, option, value)
+    logger.debug("Config value for [%s] %s: %s", section, option, value)
     return value
 
 
@@ -54,7 +71,7 @@ def arg_checker(args):
     # Host
     if not host:
         raise Exception("No host value")
-    logging.debug("Host value: %s", host)
+    logger.debug("Host value: %s", host)
 
     # Port
     if not port:
@@ -63,12 +80,12 @@ def arg_checker(args):
         port = int(port)
     except ValueError:
         raise Exception("Port value must be an integer")
-    logging.debug("Port value: %d", port)
+    logger.debug("Port value: %d", port)
 
     # Redis Host
     if not redis_host:
         raise Exception("No Redis host")
-    logging.debug("Redis host value: %s", redis_host)
+    logger.debug("Redis host value: %s", redis_host)
 
     # Redis Port
     if not redis_port:
@@ -77,7 +94,7 @@ def arg_checker(args):
         redis_port = int(redis_port)
     except ValueError as exec:
         raise Exception("Redis port value must be an integer") from exec
-    logging.debug("Redis port value: %d", redis_port)
+    logger.debug("Redis port value: %d", redis_port)
 
     # Maximum
     if not maximum:
@@ -86,7 +103,7 @@ def arg_checker(args):
         maximum = int(maximum)
     except ValueError as exec:
         raise Exception("Maximum value should be an integer") from exec
-    logging.debug("Maximum value: %d", maximum)
+    logger.debug("Maximum value: %d", maximum)
 
     args.host = host
     args.port = port
@@ -97,9 +114,9 @@ def arg_checker(args):
 
 if __name__ == "__main__":
     args = parser().parse_args()
-    logging.debug("Parsed arguments: %s", args)
+    logger.debug("Parsed arguments: %s", args)
     arg_checker(args)
-    logging.info("Starting server with args: %s", args)
+    logger.info("Starting server with args: %s", args)
     service = server.Server(args.host, args.port,
                             args.redis_host, args.redis_port, args.maximum)
     asyncio.run(service.serve())
