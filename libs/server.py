@@ -22,6 +22,9 @@ class Server:
 
     async def serve(self):
         await self.redis.connect()
+        self.CURRENT = await self.redis.redis.scard('running_queue')
+        logger.warn(f"Existing running queue is {self.CURRENT}")
+
         server = await websockets.serve(self.handle_client, self.host, self.port)
         logger.info("WebSocket server started on %s:%s", self.host, self.port)
 
@@ -49,7 +52,7 @@ class Server:
                     elif action == "complete":
                         message["channel"] = path
                         await self.redis.complete(message)
-                        self.MAXIMUM += 1
+                        self.CURRENT -= 1
                         logger.info("Message completed: %s", message)
 
                     elif action == "flush":
@@ -64,15 +67,17 @@ class Server:
 
     async def launch(self):
         while True:
-            if self.MAXIMUM > 0:
+            if self.CURRENT < self.MAXIMUM:
                 item = await self.redis.launch()
                 if item:
                     channel = item.get('channel')
                     logger.debug("Launching item: %s", item)
                     for client in clients[channel]:
                         await client.send(json.dumps(item))
-                    self.MAXIMUM -= 1
+                    self.CURRENT += 1
                     logger.info("Item launched and sent to clients: %s", item)
+            else:
+                logger.warning("Current running is too many")
             await asyncio.sleep(1)
 
 
