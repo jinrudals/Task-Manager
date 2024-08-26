@@ -67,6 +67,10 @@ class Server:
 
     async def launch(self):
         while True:
+            temp = await self.redis.get_maximum()
+            if temp != self.MAXIMUM and temp != -1:
+                logger.info(f"MAXIMUM has been changed from {self.MAXIMUM} to {temp}")
+                self.MAXIMUM = temp
             if self.CURRENT < self.MAXIMUM:
                 item = await self.redis.launch()
                 if item:

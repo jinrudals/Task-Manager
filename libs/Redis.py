@@ -42,6 +42,14 @@ class RedisClient:
         await self.redis.zadd(PENDING, {item_key: priority})
         logger.info(f"Item({item_id}) is added")
 
+    async def get_maximum(self):
+        value = await self.redis.get("regression:maximum")
+        try:
+            value = int(value)
+            return value
+        except:
+            return -1
+
     async def launch(self):
         item_keys = await self.redis.zrange(PENDING, 0, 0)
         if not item_keys:
