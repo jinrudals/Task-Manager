@@ -29,6 +29,10 @@ class RedisClient:
         item_id = f"{channel}/{project}/{build}/{command}"
         item_key = f"item:{item_id}"
 
+        # If item_key is either in pending queue or running queue, skip
+        if await self.redis.exists(item_key) != 0:
+            return
+
         priority = await self.calculate_priority(owner, project)
 
         item["priority"] = priority
