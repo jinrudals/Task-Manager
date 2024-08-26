@@ -7,6 +7,7 @@ PENDING = 'pending_queue'
 
 class RedisClient:
     def __init__(self, host, port):
+        logger.debug("Redis Client is being waited here")
         self.host = host
         self.port = port
         self.redis = None
@@ -44,7 +45,6 @@ class RedisClient:
     async def launch(self):
         item_keys = await self.redis.zrange(PENDING, 0, 0)
         if not item_keys:
-            logger.warning("No items available in the pending queue")
             return None
 
         logger.info(f"Item should be launched here {item_keys}")
@@ -78,7 +78,7 @@ class RedisClient:
 
         if not item_details:
             logger.error("Item not found in running queue")
-            return None
+            return 0
 
         owner = item_details["owner"]
         project = item_details["project"]
@@ -91,6 +91,7 @@ class RedisClient:
         await self.redis.delete(item_id)
 
         logger.info(f"Complete item {item}")
+        return 1
 
     async def flush(self):
         await self.redis.flushdb()

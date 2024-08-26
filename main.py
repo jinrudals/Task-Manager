@@ -11,12 +11,13 @@ from libs import server
 
 # Configure logging
 logger = logging.getLogger()
-
-fh = logging.FileHandler("app.log")
+logger.setLevel(logging.DEBUG)
+f = Path(__name__).parent / "app2.log"
+fh = logging.FileHandler(f)
 fh.setLevel(logging.DEBUG)
 
 sh = logging.StreamHandler()
-sh.setLevel(logging.INFO)
+sh.setLevel(logging.NOTSET)
 
 formatter = logging.Formatter(
     "[%(asctime)s][%(levelname)s][%(name)s] : %(message)s"
@@ -26,6 +27,7 @@ formatter = logging.Formatter(
 fh.setFormatter(formatter)
 sh.setFormatter(formatter)
 
+logger.handlers.clear()
 if not logger.handlers:
     logger.addHandler(fh)
     logger.addHandler(sh)

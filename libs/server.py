@@ -51,9 +51,9 @@ class Server:
 
                     elif action == "complete":
                         message["channel"] = path
-                        await self.redis.complete(message)
-                        self.CURRENT -= 1
-                        logger.info("Message completed: %s", message)
+                        v1 = await self.redis.complete(message)
+                        self.CURRENT -= v1
+                        logger.warning("Message completed: %s", message)
 
                     elif action == "flush":
                         await self.redis.flush()
@@ -76,8 +76,6 @@ class Server:
                         await client.send(json.dumps(item))
                     self.CURRENT += 1
                     logger.info("Item launched and sent to clients: %s", item)
-            else:
-                logger.warning("Current running is too many")
             await asyncio.sleep(1)
 
 

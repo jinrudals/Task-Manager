@@ -1,0 +1,13 @@
+[Unit]
+Description=Task Manager Service
+After=network.target
+
+[Service]
+User=benjamin.jin
+#Group=benjamin.jin
+WorkingDirectory=/home/benjamin.jin/workspace/TM/taskmanager
+ExecStart=/home/benjamin.jin/workspace/TM/taskmanager/env/bin/python3 main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
